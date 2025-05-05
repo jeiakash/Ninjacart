@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { getRandomColor } from '../../../utils/helpers';
 
@@ -10,9 +10,34 @@ export default function ItemDetail({ params }) {
   const [item, setItem] = useState(null);
   const [activeTab, setActiveTab] = useState('details');
   
+  // Refs for scroll position management
+  const contentRef = useRef(null);
+  const savedPositionRef = useRef(null);
+  
+  // Save scroll position on scroll
+  const handleScroll = () => {
+    if (contentRef.current) {
+      savedPositionRef.current = contentRef.current.scrollTop;
+    }
+  };
+
+  // Handle tab change with scroll position preservation
+  const handleTabChange = (tab) => {
+    if (contentRef.current) {
+      // Store the current scroll position before changing tabs
+      savedPositionRef.current = contentRef.current.scrollTop;
+    }
+    setActiveTab(tab);
+  };
+  
   // Simulate data fetching
   useEffect(() => {
     const fetchItemDetails = async () => {
+      // Save scroll position before updating data
+      if (contentRef.current) {
+        savedPositionRef.current = contentRef.current.scrollTop;
+      }
+      
       // Simulate API delay
       await new Promise(resolve => setTimeout(resolve, 600));
       
@@ -49,6 +74,21 @@ export default function ItemDetail({ params }) {
     
     fetchItemDetails();
   }, [id]);
+  
+  // Restore scroll position after render updates
+  useEffect(() => {
+    // Only attempt to restore after item is loaded and we have a saved position
+    if (!loading && item && savedPositionRef.current !== null && contentRef.current) {
+      // Use a small delay to ensure DOM has updated
+      const timer = setTimeout(() => {
+        if (contentRef.current) {
+          contentRef.current.scrollTop = savedPositionRef.current;
+        }
+      }, 10);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [loading, item, activeTab]);
 
   // Button to add to favorites (just UI demonstration)
   const [isFavorite, setIsFavorite] = useState(false);
@@ -92,7 +132,11 @@ export default function ItemDetail({ params }) {
         Back
       </button>
 
-      <div className="bg-white rounded-lg shadow-lg p-6">
+      <div 
+        className="bg-white rounded-lg shadow-lg p-6 overflow-y-auto h-[80vh]" 
+        ref={contentRef}
+        onScroll={handleScroll}
+      >
         <div className="flex justify-between items-start mb-4">
           <h1 className="text-2xl font-bold">{item.title}</h1>
           <span className="px-3 py-1 bg-gray-100 text-gray-700 rounded-full text-sm">
@@ -145,7 +189,7 @@ export default function ItemDetail({ params }) {
                   ? 'border-blue-500 text-blue-600' 
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
-              onClick={() => setActiveTab('details')}
+              onClick={() => handleTabChange('details')}
             >
               Details
             </button>
@@ -155,7 +199,7 @@ export default function ItemDetail({ params }) {
                   ? 'border-blue-500 text-blue-600' 
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
-              onClick={() => setActiveTab('specs')}
+              onClick={() => handleTabChange('specs')}
             >
               Specifications
             </button>
@@ -165,7 +209,7 @@ export default function ItemDetail({ params }) {
                   ? 'border-blue-500 text-blue-600' 
                   : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
               }`}
-              onClick={() => setActiveTab('reviews')}
+              onClick={() => handleTabChange('reviews')}
             >
               Reviews
             </button>
