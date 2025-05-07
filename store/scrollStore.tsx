@@ -1,8 +1,11 @@
-import { create } from 'zustand';
+import create from 'zustand';
 
-export const useScrollStore = create((set) => ({
+interface ScrollStore {
+  scrollPosition: number;
+  setScrollPosition: (position: number) => void;
+}
+
+export const useScrollStore = create<ScrollStore>((set) => ({
   scrollPosition: 0,
   setScrollPosition: (position) => set({ scrollPosition: position }),
 }));
-
-
